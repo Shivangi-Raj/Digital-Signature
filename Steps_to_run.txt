@@ -1,0 +1,4 @@
+open terminal
+"go to the path where the project is" in the terminal
+source tutorial-env/bin/activate
+python3 app.py
