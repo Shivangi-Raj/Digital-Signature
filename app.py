@@ -141,9 +141,13 @@ def hashMessage(message):
 
 
 
-def digital_signature(message,n,GPoint,Acurve,Pcurve,priv_key):
-    publicKey= (7898651914271609667200961661227034323655772406619074699519311977312344259534,8727739791330194990567819163971370160537209299707121300169064837432917334113)
-    # publicKey=(24649997625158719148197039178713781596844819968152314347662800023973838986324,29054514210612187021911206675018486354389550454524519643831189136130687914734)
+def digital_signature(message,n,GPoint,Acurve,Pcurve,priv_key,username):
+    key = Keys.query.filter_by(name=username).all()
+    public_key1=""
+    public_key2=""
+    public_key1 = key[0].public_key1
+    public_key2 = key[0].public_key2
+    publicKey=(int(public_key1),int(public_key2))
     r = hashMessage(hashMessage(message) + message) % Pcurve
     R = EccMultiply(GPoint, r)
     h = hashMessage(R[0] + publicKey[0] + message) % Pcurve
@@ -196,34 +200,35 @@ def Signature_generation():
     target = os.path.join(app_root, 'files')
     if not os.path.isdir(target):
         os.makedirs(target)
-    if request.method == 'POST':
-        private_key=request.form['priv_key']
-        priv_key=int(private_key)
-        print(type(priv_key))
-        file = request.files['message']
-        # priv_key_name=private_key.filename or ''
-        file_name = file.filename or ''
-        destination = '/'.join([target, file_name])
-        # destination_priv='/'.join([target, priv_key_name])
-        print("destination",destination)
-        file.save(destination)
-        # private_key.save(destination_priv)
-        print(file,file_name)
-        with open(destination, 'r') as f:
-            message = f.read()
-        # with open(destination_priv, 'r') as f:
-            # private_key = f.read()
+
+    username=request.form['name']
+    private_key=request.files['priv_key']
     # priv_key=int(private_key)
-    print(message)
+    # print(type(priv_key))
+    file = request.files['message']
+    priv_key_name=private_key.filename or ''
+    file_name = file.filename or ''
+    destination = '/'.join([target, file_name])
+    destination_priv='/'.join([target, priv_key_name])
+    print("destination",destination)
+    file.save(destination)
+    private_key.save(destination_priv)
+    print(file,file_name)
+    with open(destination, 'r') as f:
+        message = f.read()
+    with open(destination_priv, 'r') as f:
+        private_key = f.read()
+    priv_key=int(private_key)
+    print(message,priv_key)
     message_in_int=textToInt(message)
-    signature = digital_signature(message_in_int,N,GPoint,a,Pcurve,priv_key)
+    signature = digital_signature(message_in_int,N,GPoint,a,Pcurve,priv_key,username)
     target = os.path.join(app_root, 'files')
     with open("files/sign.txt",'w') as f:
         f.write(str(signature))
     print(target)
     print(type(send_from_directory(directory=target,filename="sign.txt")))
     return send_from_directory(directory=target,filename="sign.txt",as_attachment=True)
-    
+        
 #verification
 @app.route('/abc',methods =['POST'])
 def Signature_verification():
@@ -232,23 +237,24 @@ def Signature_verification():
         os.makedirs(target)
     if request.method == 'POST':
         name=request.form['name']
-        sign=request.form['sign']
+        signature=request.files['sign']
         file = request.files['message']
-        # sign_name=signature.filename or ''
+        sign_name=signature.filename or ''
         file_name = file.filename or ''
-        # destination_sign='/'.join([target,sign_name])
+        destination_sign='/'.join([target,sign_name])
         destination = '/'.join([target, file_name])
         print("destination",destination)
         file.save(destination)
-        # signature.save(destination_sign)
+        signature.save(destination_sign)
         print(file,file_name)
-        # with open(destination_sign,'r') as s:
-            # sign= s.read()
+        with open(destination_sign,'r') as s:
+            sign= s.read()
         with open(destination, 'r') as f:
             message = f.read()
-    print(message,name)
+    print(message,name,sign)
     # print("signature",sign,sign_name)
     sign=sign.replace(' ','')
+    sign=sign.replace("\n",'')
     sign=sign.replace('(',"")
     sign=sign.replace(')',"")
     sig_split=sign.split(",")
