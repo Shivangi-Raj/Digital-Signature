@@ -1,5 +1,5 @@
 
-from flask import Flask, request,jsonify ,redirect,render_template,send_from_directory
+from flask import Flask, request,jsonify ,redirect,render_template,send_from_directory,url_for
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -8,7 +8,8 @@ from hashlib import sha256
 from egcd import egcd
 import os,sys
 import timeit
-# from bigchaindb_driver import BigchainDB
+from bigchaindb_driver import BigchainDB
+from bigchaindb_driver.crypto import generate_keypair
 
 
 app = Flask(__name__)
@@ -18,7 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///keys.db'
 debug=False
 ALLOWED_HOST = ["*"]
 bdb_root_url = 'https://localhost:3001'
-# bdb = BigchainDB(bdb_root_url)
+bdb = BigchainDB(bdb_root_url)
 #
 
 
@@ -58,7 +59,7 @@ d=Pcurve-(ddash%Pcurve)
 class Keys(db.Model):
     id = db.Column(db.Integer, primary_key=True,autoincrement=True)
     name = db.Column(db.String(200),unique=True, nullable=False)
-    # private_key = db.Column(db.String, unique=True)
+    password=db.Column(db.String(200),nullable=False)
     public_key1 = db.Column(db.String(500))
     public_key2 = db.Column(db.String(500))
 
@@ -173,25 +174,89 @@ def digital_verification(signature,message,n,Gpoint,Acurve,Pcurve,pub_key):
 
     return is_valid
 
+@app.route('/')
+def home():
+    return render_template('entry.html')
+
+@app.route('/register', methods=['POST','GET'])
+def register():
+    if request.method=='POST':
+        user_name=request.form["reg_name"]
+        password=request.form["reg_pass"]
+        confirm_password=request.form["reg_cnfpass"]
+        l=[user_name,password,confirm_password]
+        # print(l)
+        return redirect(url_for("generation",l=l))
+    return render_template('register.html')
+
+    
+@app.route('/login')
+def login():
+    
+    return render_template('login.html')
+
+
 #key
-@app.route('/key',methods =['POST'])
-def key_generation():
-    start = timeit.default_timer()
-    data = request.get_json()
-    name=data['name']
-    priv_key = generatePrivateKey()
-    public_key= generatePublicKey(priv_key)
-    pub_key1=str(public_key[0])
-    pub_key2=str(public_key[1])
-    with open("files/private.txt",'w') as f:
-        f.write(str(priv_key))
-    new_key=Keys(name=name,public_key1=pub_key1,public_key2=pub_key2)
-    db.session.add(new_key)
-    db.session.commit()
-    target = os.path.join(app_root, 'files')
-    stop = timeit.default_timer()
-    print('Time: ', stop - start)
-    return send_from_directory(directory=target,filename="private.txt",as_attachment=True)
+@app.route('/genration/<l>',methods =['POST','GET'])
+def generation(l):
+    if request.method=="POST":
+        print("in post")
+        return send_from_directory(l)
+        
+    else:
+        print("in get")
+        start = timeit.default_timer()
+        l=l.replace("[","")
+        l=l.replace("]","")
+        l=l.replace("'","")
+        l=l.replace(" ","")
+        print(l)
+        # l.pop(-1)
+        l=l.split(",")
+        print("name",l[1])
+        print("pass",l[0])
+        # log.console(l)
+        # data = request.get_json()
+        # name=request.form['name']
+        priv_key = generatePrivateKey()
+        # priv_key= 52DtQiYVZswRhx8dufcBaPhYxAYk1t9NiDUS2PndZGqn
+        #VP3Xfs2keB1CtJAeL3tsw3YACHaYxaChgUsEC16TszF
+        public_key= generatePublicKey(priv_key)
+        pub_key1=str(public_key[0])
+        pub_key2=str(public_key[1])
+        with open("files/private.txt",'w') as f:
+            f.write(str(priv_key))
+        new_key=Keys(name=l[0],password=l[1],public_key1=pub_key1,public_key2=pub_key2)
+        db.session.add(new_key)
+        db.session.commit()
+        target = os.path.join(app_root, 'files')
+        stop = timeit.default_timer()
+        print('Time: ', stop - start)
+        files=send_from_directory(directory=target,filename="private.txt",as_attachment=True)
+        return send_from_directory(directory=target,filename="private.txt",as_attachment=True)
+        return render_template('generation.html',l=files)
+
+
+# @app.route('/generation/<file>')
+# def generation(file):
+#     return render_template('generation.html',file=file)
+
+@app.route('/verification')
+def verification():
+    return render_template('verification.html')
+
+
+# @app.route('/register')
+# def register():
+
+#         return redirect(url_for("dumy",user=user_name))
+#     else:
+#         return render_template('register.html')
+    
+# @app.route('/login')
+# def login():
+#     return render_template('login.html')
+
 
 
 #generation

@@ -1,0 +1,23 @@
+.bg-nav{
+    background: #ff0084;
+    background: -webkit-linear-gradient(to right, #33001b,#ff0084);
+    background: linear-gradient(to right,#33001b,#ff0084);
+}
+
+
+.mt-100{
+    margin-top: 100px;
+}
+
+
+.gfg { 
+    background-color: white; 
+    border: 2px solid black; 
+    color: green; 
+    padding: 5px 10px; 
+    text-align: center; 
+    display: inline-block; 
+    font-size: 20px; 
+    margin: 10px 30px; 
+    cursor: pointer; 
+    } 
