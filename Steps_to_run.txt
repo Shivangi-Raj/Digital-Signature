@@ -9,9 +9,15 @@ $python3
 >>> db.create_all()
 >>> exit()
 
-#git commands:
+#git commands:(push in git hub)
+$ git init.
+$ git add .
+$ git commit -m “First commit”
+$ git remote add origin remote repository URL.
+$ git remote -v [Note: Verifies the new remote URL]
+$ git push origin master.
 
-# GIT COMMAND LOCAL CLONE 
+# GIT COMMAND LOCAL CLONE (after rename a file)
 git branch -m master main
 git fetch origin
 git branch -u origin/main main
