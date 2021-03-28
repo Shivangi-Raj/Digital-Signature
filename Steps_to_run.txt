@@ -15,7 +15,7 @@ $ git add .
 $ git commit -m “First commit”
 $ git remote add origin remote repository URL.
 $ git remote -v [Note: Verifies the new remote URL]
-$ git push origin master.
+$ git push origin main
 
 # GIT COMMAND LOCAL CLONE (after rename a file)
 git branch -m master main

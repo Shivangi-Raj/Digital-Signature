@@ -23,19 +23,22 @@
             <div class="col-md-4">
                 <div class="card mt-100">
                     <div class="card-body">
-                        <form class="form">
-                            <label>Text filename</label><br>
-                            <input type="file" id="myFile" name="filename"><br><br>
+                        <form class="form" method="POST" enctype="multipart/form-data">
+                            <label>Message</label><br>
+                            <input type="file" id="myFile" name="message"><br><br>
                             <label>Digital Signature</label><br>
-                            <input type="file" id="myFile" name="filename"><br><br>
-                            <label for="fname">name:</label><br>
-                            <input type="text" id="fname" name="fname"><br><br>
+                            <input type="file" id="myFile" name="sign"><br><br>
+                            <label for="vname">name:</label><br>
+                            <input type="text" id="fname" name="vname"><br><br>
                             <input type="submit">
                         </form>
-    
                     </div>
                 </div>
-
+                {% if a==1 %}
+                <h1 class="error" style="color:rgb(53, 240, 53)"><strong>Ans:</strong> RightFull Host </h1>
+            {% elif a==2 %}
+            <h1 class="error" style="color:red"><strong>Ans:</strong> Dangrous Host </h1>
+            {% endif %}
             </div>
         </div>
     </div>

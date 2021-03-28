@@ -146,6 +146,7 @@ def digital_signature(message,n,GPoint,Acurve,Pcurve,priv_key,username):
     key = Keys.query.filter_by(name=username).all()
     public_key1=""
     public_key2=""
+    print("key :",key,username)
     public_key1 = key[0].public_key1
     public_key2 = key[0].public_key2
     publicKey=(int(public_key1),int(public_key2))
@@ -185,39 +186,8 @@ def register():
         password=request.form["reg_pass"]
         confirm_password=request.form["reg_cnfpass"]
         l=[user_name,password,confirm_password]
-        # print(l)
-        return redirect(url_for("generation",l=l))
-    return render_template('register.html')
-
-    
-@app.route('/login')
-def login():
-    
-    return render_template('login.html')
-
-
-#key
-@app.route('/genration/<l>',methods =['POST','GET'])
-def generation(l):
-    if request.method=="POST":
-        print("in post")
-        return send_from_directory(l)
-        
-    else:
         print("in get")
         start = timeit.default_timer()
-        l=l.replace("[","")
-        l=l.replace("]","")
-        l=l.replace("'","")
-        l=l.replace(" ","")
-        print(l)
-        # l.pop(-1)
-        l=l.split(",")
-        print("name",l[1])
-        print("pass",l[0])
-        # log.console(l)
-        # data = request.get_json()
-        # name=request.form['name']
         priv_key = generatePrivateKey()
         # priv_key= 52DtQiYVZswRhx8dufcBaPhYxAYk1t9NiDUS2PndZGqn
         #VP3Xfs2keB1CtJAeL3tsw3YACHaYxaChgUsEC16TszF
@@ -232,76 +202,99 @@ def generation(l):
         target = os.path.join(app_root, 'files')
         stop = timeit.default_timer()
         print('Time: ', stop - start)
-        files=send_from_directory(directory=target,filename="private.txt",as_attachment=True)
+        # files=send_from_directory(directory=target,filename="private.txt",as_attachment=True)
         return send_from_directory(directory=target,filename="private.txt",as_attachment=True)
-        return render_template('generation.html',l=files)
+        # print(l)
+        # return redirect(url_for("generation",l=l))
+    return render_template('register.html')
+
+    
+@app.route('/login',methods=['POST','GET'])
+def login():
+    error=None
+    if request.method=="POST":
+        user_name=request.form["log_name"]
+        # password=request.form["log_pass"]
+        key = Keys.query.filter_by(name=user_name).all()
+        password= key[0].password
+        print(type(password),password)
+        if request.form['log_pass'] != password:
+            error = 'Invalid Credentials. Please try again.'
+            print(error)
+        else:
+            l=[user_name]
+            return redirect(url_for('generation',l=l))
+    return render_template('login.html',error=error)
+
+@app.route("/logout")
+def logout():
+    # session['logged_in'] = False
+    return home()
+
+#key
+@app.route('/genration/<l>',methods =['POST','GET'])
+def generation(l):
+    if request.method=="POST":
+        print("in post")
+        if request.form['submit_btn']=='genr_submit':
+            target = os.path.join(app_root, 'files')
+            if not os.path.isdir(target):
+                os.makedirs(target)
+            username=request.form['fname']
+            private_key=request.files['priv_key']
+            file = request.files['message']
+            priv_key_name=private_key.filename or ''
+            file_name = file.filename or ''
+            destination = '/'.join([target, file_name])
+            destination_priv='/'.join([target, priv_key_name])
+            print("destination",destination)
+            file.save(destination)
+            private_key.save(destination_priv)
+            print(file,file_name)
+            with open(destination, 'r') as f:
+                message = f.read()
+            with open(destination_priv, 'r') as f:
+                private_key = f.read()
+            priv_key=int(private_key)
+            print(message,priv_key)
+            message_in_int=textToInt(message)
+            # generation
+            signature = digital_signature(message_in_int,N,GPoint,a,Pcurve,priv_key,username)
+            #
+            target = os.path.join(app_root, 'files')
+            with open("files/sign.txt",'w') as f:
+                f.write(str(signature))
+            print(target)
+            print(type(send_from_directory(directory=target,filename="sign.txt")))
+            return send_from_directory(directory=target,filename="sign.txt",as_attachment=True)
+        elif request.form['submit_btn']=='log_out':
+            print("sign out clicked")
+            return redirect(url_for("logout"))
+        else:
+            pass
+    else:
+        print("list passed :",l,type(l))
+        l=l.replace("['","")
+        l=l.replace("']","")
+        ind=l.index('@')
+        st=l[:ind]
+        return render_template('generation.html',l=st)
 
 
 # @app.route('/generation/<file>')
 # def generation(file):
 #     return render_template('generation.html',file=file)
 
-@app.route('/verification')
+@app.route('/verification/', methods=['POST','GET'])
 def verification():
-    return render_template('verification.html')
-
-
-# @app.route('/register')
-# def register():
-
-#         return redirect(url_for("dumy",user=user_name))
-#     else:
-#         return render_template('register.html')
-    
-# @app.route('/login')
-# def login():
-#     return render_template('login.html')
-
-
-
-#generation
-@app.route('/signGenr',methods =['POST'])
-def Signature_generation():
-    target = os.path.join(app_root, 'files')
-    if not os.path.isdir(target):
-        os.makedirs(target)
-
-    username=request.form['name']
-    private_key=request.files['priv_key']
-    # priv_key=int(private_key)
-    # print(type(priv_key))
-    file = request.files['message']
-    priv_key_name=private_key.filename or ''
-    file_name = file.filename or ''
-    destination = '/'.join([target, file_name])
-    destination_priv='/'.join([target, priv_key_name])
-    print("destination",destination)
-    file.save(destination)
-    private_key.save(destination_priv)
-    print(file,file_name)
-    with open(destination, 'r') as f:
-        message = f.read()
-    with open(destination_priv, 'r') as f:
-        private_key = f.read()
-    priv_key=int(private_key)
-    print(message,priv_key)
-    message_in_int=textToInt(message)
-    signature = digital_signature(message_in_int,N,GPoint,a,Pcurve,priv_key,username)
-    target = os.path.join(app_root, 'files')
-    with open("files/sign.txt",'w') as f:
-        f.write(str(signature))
-    print(target)
-    print(type(send_from_directory(directory=target,filename="sign.txt")))
-    return send_from_directory(directory=target,filename="sign.txt",as_attachment=True)
-        
-#verification
-@app.route('/abc',methods =['POST'])
-def Signature_verification():
+    ans=None
+    a=0
     target = os.path.join(app_root, 'files')
     if not os.path.isdir(target):
         os.makedirs(target)
     if request.method == 'POST':
-        name=request.form['name']
+        print("in post")
+        name=request.form['vname']
         signature=request.files['sign']
         file = request.files['message']
         sign_name=signature.filename or ''
@@ -316,33 +309,93 @@ def Signature_verification():
             sign= s.read()
         with open(destination, 'r') as f:
             message = f.read()
-    print(message,name,sign)
-    # print("signature",sign,sign_name)
-    sign=sign.replace(' ','')
-    sign=sign.replace("\n",'')
-    sign=sign.replace('(',"")
-    sign=sign.replace(')',"")
-    sig_split=sign.split(",")
-    sign=((sig_split[0],sig_split[1]),sig_split[2])
-    print("signature 1 : ",sign)
-    key = Keys.query.filter_by(name=name).all()
-    public_key1=""
-    public_key2=""
-    output=[]
-    public_key1 = key[0].public_key1
-    public_key2 = key[0].public_key2
-    public_key=(int(public_key1),int(public_key2))
-    r1=int(sign[0][0])
-    r2=int(sign[0][1])
-    R=(r1,r2)
-    s=int(sign[1])
-    si=(R,s)
-    print("si is perfect",R,s)
-    valid = digital_verification(si,message,N,GPoint,a,Pcurve,public_key)
-    print("valid",valid)
-    return str(valid)
-    # # print(data)
-    # return "True"
+        print(message,name,sign)
+        # print("signature",sign,sign_name)
+        sign=sign.replace(' ','')
+        sign=sign.replace("\n",'')
+        sign=sign.replace('(',"")
+        sign=sign.replace(')',"")
+        sig_split=sign.split(",")
+        sign=((sig_split[0],sig_split[1]),sig_split[2])
+        print("signature 1 : ",sign)
+        key = Keys.query.filter_by(name=name).all()
+        public_key1=""
+        public_key2=""
+        output=[]
+        public_key1 = key[0].public_key1
+        public_key2 = key[0].public_key2
+        public_key=(int(public_key1),int(public_key2))
+        r1=int(sign[0][0])
+        r2=int(sign[0][1])
+        R=(r1,r2)
+        s=int(sign[1])
+        si=(R,s)
+        print("si is perfect",R,s)
+        valid = digital_verification(si,message,N,GPoint,a,Pcurve,public_key)
+        print("valid",valid)
+        # ans=str(valid)
+        ans=" Noth"
+        if(valid==True):
+            a=1
+        else:
+            a=2
+        print(ans)
+        # return str(valid)
+        # return redirect(url_for("verification",ans=ans))
+    print("in get")
+    return render_template('verification.html',a=a)
+
+
+
+# #verification
+# @app.route('/abc',methods =['POST'])
+# def Signature_verification():
+#     target = os.path.join(app_root, 'files')
+#     if not os.path.isdir(target):
+#         os.makedirs(target)
+#     if request.method == 'POST':
+#         name=request.form['name']
+#         signature=request.files['sign']
+#         file = request.files['message']
+#         sign_name=signature.filename or ''
+#         file_name = file.filename or ''
+#         destination_sign='/'.join([target,sign_name])
+#         destination = '/'.join([target, file_name])
+#         print("destination",destination)
+#         file.save(destination)
+#         signature.save(destination_sign)
+#         print(file,file_name)
+#         with open(destination_sign,'r') as s:
+#             sign= s.read()
+#         with open(destination, 'r') as f:
+#             message = f.read()
+#     print(message,name,sign)
+#     # print("signature",sign,sign_name)
+#     sign=sign.replace(' ','')
+#     sign=sign.replace("\n",'')
+#     sign=sign.replace('(',"")
+#     sign=sign.replace(')',"")
+#     sig_split=sign.split(",")
+#     sign=((sig_split[0],sig_split[1]),sig_split[2])
+#     print("signature 1 : ",sign)
+#     key = Keys.query.filter_by(name=name).all()
+#     public_key1=""
+#     public_key2=""
+#     output=[]
+#     public_key1 = key[0].public_key1
+#     public_key2 = key[0].public_key2
+#     public_key=(int(public_key1),int(public_key2))
+#     r1=int(sign[0][0])
+#     r2=int(sign[0][1])
+#     R=(r1,r2)
+#     s=int(sign[1])
+#     si=(R,s)
+#     print("si is perfect",R,s)
+#     valid = digital_verification(si,message,N,GPoint,a,Pcurve,public_key)
+#     print("valid",valid)
+#     return str(valid)
+#     # # print(data)
+#     # return "True"
 
 if __name__=="__main__":
     app.run(debug=True,port=3001)

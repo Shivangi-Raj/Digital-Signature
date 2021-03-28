@@ -14,7 +14,6 @@
     <nav class ="navbar">
         <a href="" class="navbar-brand"> </a>
     </nav>
-<h1> the list value {{l}}</h1>>
     <div class="container">
         <div class="row">
             <div class="col-md-8">
@@ -23,15 +22,18 @@
             <div class="col-md-4">
                 <div class="card mt-100">
                     <div class="card-body">
-                        <form class="form">
-                            <label>Text filename</label><br>
-                            <input type="file" id="myFile" name="filename"><br><br>
+                        <form class="form" method="POST" enctype="multipart/form-data">
+                            <h1> Hello {{l}}</h1>
+                            <label>The file</label><br>
+                            <input type="file" id="msg_file" name="message"><br><br>
                             <label>Private key</label><br>
-                            <input type="file" id="myFile" name="filename"><br><br>
+                            <input type="file" id="priv_file" name="priv_key"><br><br>
                             <label for="fname">name:</label><br>
                             <input type="text" id="fname" name="fname"><br><br>
-                            <input type="submit">
+                            <input type="submit" name="submit_btn" value="genr_submit">
+                            <input type="submit" name="submit_btn" value="log_out">
                         </form>
+
     
                     </div>
                 </div>

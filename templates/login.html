@@ -23,12 +23,15 @@
             <div class="col-md-4">
                 <div class="card mt-100">
                     <div class="card-body">
-                        <form class="form">
+                        <form class="form" method="POST">
+                            {% if error %}
+                                <p class="error" style="color: red;"><strong>Error:</strong> {{ error }}</p>
+                            {% endif %}
                             <label>UserId</label><br>
-                            <input type="email" class="form-control"><br>
+                            <input type="email" class="form-control", name="log_name"><br>
                             <label>Password</label><br>
-                            <input type="password" class="form-control"><br><br>
-                            <input type="submit" class="btn btn-primary btn-block btn-lg" val="Login"  formaction="http://127.0.0.1:3000/generation">
+                            <input type="password" class="form-control", name="log_pass"><br><br>
+                            <input type="submit" class="btn btn-primary btn-block btn-lg" value="Login">
                         </form>
                         <p>Not a member? <a href="/register">Create Account</a></p>
                     </div>
