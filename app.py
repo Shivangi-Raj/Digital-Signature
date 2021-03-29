@@ -1,5 +1,5 @@
 
-from flask import Flask, request,jsonify ,redirect,render_template,send_from_directory,url_for
+from flask import Flask, request,jsonify ,redirect,render_template,send_from_directory,url_for,session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -10,17 +10,41 @@ import os,sys
 import timeit
 from bigchaindb_driver import BigchainDB
 from bigchaindb_driver.crypto import generate_keypair
+from authlib.integrations.flask_client import OAuth
+from datetime import timedelta
+
 
 
 app = Flask(__name__)
+oauth = OAuth(app)
+google=oauth.register(
+    oauth.register(
+    name='google',
+    client_id='762670119940-nncgfi9f3sjaqu49tss26ife6e3thbl0.apps.googleusercontent.com',
+    client_secret='bF1ZPJ6fA_NeRXJC_-7YrZ-Y',
+    access_token_url='https://accounts.google.com/o/oauth2/token',
+    access_token_params=None,
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
+    authorize_params=None,
+    api_base_url='https://www.googleapis.com/oauth2/v1/',
+    userinfo_endpoint='https://openidconnect.googleapis.com/v1/userinfo',  # This is only needed if using openId to fetch user info
+    client_kwargs={'scope': 'openid email profile'},
+)
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY']='HELLOWORLD'
+# app.config['SECRET_KEY']='HELLOWORLD'
+app.secret_key ='bF1ZPJ6fA_NeRXJC_-7YrZ-Y'
 app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///keys.db'
+app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 debug=False
 ALLOWED_HOST = ["*"]
 bdb_root_url = 'https://localhost:3001'
 bdb = BigchainDB(bdb_root_url)
 #
+
+
+
 
 
 db = SQLAlchemy(app)
@@ -178,6 +202,18 @@ def digital_verification(signature,message,n,Gpoint,Acurve,Pcurve,pub_key):
 @app.route('/')
 def home():
     return render_template('entry.html')
+# @app.route('/')
+# def hello_world():
+#     email = dict(session)['profile']['email']
+#     return f'Hello, you are logge in as {email}!'
+
+# @app.route('/login1')
+# def login1():
+#     google=oauth.create_client('google')
+#     redirect_uri = url_for('authorize', _external=True)
+#     return google.authorize_redirect(redirect_uri)
+
+
 
 @app.route('/register', methods=['POST','GET'])
 def register():
@@ -220,11 +256,30 @@ def login():
         print(type(password),password)
         if request.form['log_pass'] != password:
             error = 'Invalid Credentials. Please try again.'
+            return render_template('login.html',error=error)
             print(error)
         else:
             l=[user_name]
             return redirect(url_for('generation',l=l))
-    return render_template('login.html',error=error)
+    else:
+        print("in get")
+        # if request.form['submit_btn']=='google_signIn':
+        #     print("in submit button")
+        #     google = oauth.create_client('google')  # create the google oauth client
+        #     redirect_uri = url_for('authorize', _external=True)
+        #     return google.authorize_redirect(redirect_uri)
+        return render_template('login.html',error=error)
+
+@app.route('/authorize')
+def authorize():
+    google = oauth.create_client('google')  # create the google oauth client
+    token = google.authorize_access_token()  # Access token from google (needed to get user info)
+    resp = google.get('userinfo')  # userinfo contains stuff u specificed in the scrope
+    user_info = resp.json()
+    user = oauth.google.userinfo()  
+    session['profile'] = user_info
+    session.permanent = True  # make the session permanant so it keeps existing after broweser gets closed
+    return redirect('/')
 
 @app.route("/logout")
 def logout():
