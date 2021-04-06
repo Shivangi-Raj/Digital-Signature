@@ -8,8 +8,8 @@ from hashlib import sha256
 from egcd import egcd
 import os,sys
 import timeit
-from bigchaindb_driver import BigchainDB
-from bigchaindb_driver.crypto import generate_keypair
+# from bigchaindb_driver import BigchainDB
+# from bigchaindb_driver.crypto import generate_keypair
 from authlib.integrations.flask_client import OAuth
 from datetime import timedelta
 
@@ -39,8 +39,8 @@ app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 debug=False
 ALLOWED_HOST = ["*"]
-bdb_root_url = 'https://localhost:3001'
-bdb = BigchainDB(bdb_root_url)
+# bdb_root_url = 'https://localhost:3001'
+# bdb = BigchainDB(bdb_root_url)
 #
 
 
@@ -217,12 +217,19 @@ def home():
 
 @app.route('/register', methods=['POST','GET'])
 def register():
+    error=None
     if request.method=='POST':
         user_name=request.form["reg_name"]
         password=request.form["reg_pass"]
         confirm_password=request.form["reg_cnfpass"]
         l=[user_name,password,confirm_password]
         print("in get")
+        if Keys.query.filter(Keys.name == user_name).first():
+            error="Username is already registered"
+            return render_template('register.html',error=error)
+        if password!=confirm_password:
+            error="password doesn't match"
+            return render_template('register.html',error=error)
         start = timeit.default_timer()
         priv_key = generatePrivateKey()
         # priv_key= 52DtQiYVZswRhx8dufcBaPhYxAYk1t9NiDUS2PndZGqn
@@ -252,10 +259,15 @@ def login():
         user_name=request.form["log_name"]
         # password=request.form["log_pass"]
         key = Keys.query.filter_by(name=user_name).all()
+        # print("keys :",key)
+        if(len(key)==0):
+            error="Invalid username or this username is not yet registered"
+            return render_template('login.html',error=error)
+            print(error)   
         password= key[0].password
-        print(type(password),password)
+        print("key",key,type(password),password)        
         if request.form['log_pass'] != password:
-            error = 'Invalid Credentials. Please try again.'
+            error = 'Invalid Password. Please try again.'
             return render_template('login.html',error=error)
             print(error)
         else:
@@ -295,7 +307,11 @@ def generation(l):
             target = os.path.join(app_root, 'files')
             if not os.path.isdir(target):
                 os.makedirs(target)
-            username=request.form['fname']
+            # username=request.form['fname']
+            st=l.replace("['","")
+            st=st.replace("']","")
+            username=st
+            print("The Username :",type(l),l)
             private_key=request.files['priv_key']
             file = request.files['message']
             priv_key_name=private_key.filename or ''
@@ -366,6 +382,10 @@ def verification():
             message = f.read()
         print(message,name,sign)
         # print("signature",sign,sign_name)
+        if(len(sign)!=314):
+            # ans="Dangrous Host(Invalid Digital Signature)"
+            a=3
+            return render_template('verification.html',a=a)
         sign=sign.replace(' ','')
         sign=sign.replace("\n",'')
         sign=sign.replace('(',"")
@@ -374,6 +394,11 @@ def verification():
         sign=((sig_split[0],sig_split[1]),sig_split[2])
         print("signature 1 : ",sign)
         key = Keys.query.filter_by(name=name).all()
+        if(len(key)==0):
+            # error="Invalid username or this username is not yet registered"
+            # return render_template('login.html',error=error)
+            a=4
+            return render_template('verification.html',a=a)
         public_key1=""
         public_key2=""
         output=[]
@@ -389,7 +414,7 @@ def verification():
         valid = digital_verification(si,message,N,GPoint,a,Pcurve,public_key)
         print("valid",valid)
         # ans=str(valid)
-        ans=" Noth"
+        ans="Noth"
         if(valid==True):
             a=1
         else:

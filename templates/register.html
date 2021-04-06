@@ -24,6 +24,9 @@
                 <div class="card mt-100">
                     <div class="card-body">
                         <form class="form" method="POST">
+                            {% if error %}
+                                <p class="error" style="color: red;"><strong>Error:</strong> {{ error }}</p>
+                            {% endif %}
                             <label>UserId</label><br>
                             <input type="email" class="form-control", name="reg_name"><br>
                             <label>Password</label><br>
