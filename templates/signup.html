@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Document</title>
+    <link rel="stylesheet" type="text/css" href="../static/css/login.css" >
+    <!-- <link rel="stylesheet" href="path/to/font-awesome/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <form  class="box" method="POST">
+                        <h1>SIGN UP</h1>
+                        {% if error %}
+                        <p class="error" style="color: red;"><strong>Error:</strong> {{ error }}</p>
+                    {% endif %}
+                        <p class="text-muted"> Please enter your details!</p>
+                         <input type="text" name="reg_name" placeholder="Username">
+                         <input type="password" name="reg_pass" placeholder="Password"> 
+                         <input type="password" name="reg_cnfpass" placeholder="Confirm Password"> 
+                          <p class="forgot text-muted" style="color: white;">Already a member? <a href="/login"> Sign In Here</a></p> 
+                          <input type="submit" name="" value="Sign Up" href="#">
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

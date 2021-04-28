@@ -1,5 +1,9 @@
 
 from flask import Flask, request,jsonify ,redirect,render_template,send_from_directory,url_for,session
+#8888
+from flask_mail import Mail,Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired
+#8888
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -12,8 +16,7 @@ import timeit
 # from bigchaindb_driver.crypto import generate_keypair
 from authlib.integrations.flask_client import OAuth
 from datetime import timedelta
-
-
+from random import *
 
 app = Flask(__name__)
 oauth = OAuth(app)
@@ -39,6 +42,19 @@ app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 debug=False
 ALLOWED_HOST = ["*"]
+
+app.config["MAIL_SERVER"]='smtp.gmail.com'  
+app.config["MAIL_PORT"] = 465      
+app.config["MAIL_USERNAME"] = 'shivangiraj779@gmail.com'  
+app.config['MAIL_PASSWORD'] = 'Shivu1999@123'  
+app.config['MAIL_USE_TLS'] = False  
+app.config['MAIL_USE_SSL'] = True  
+
+mail = Mail(app) 
+otp=randint(000000,999999)
+
+s = URLSafeTimedSerializer('Thisisasecret!!')
+
 # bdb_root_url = 'https://localhost:3001'
 # bdb = BigchainDB(bdb_root_url)
 #
@@ -65,6 +81,7 @@ Gx=15112221349535400772501151409588531511454012693041857206046113283949847762202
 Gy=46316835694926478169428394003475163141307993866256225615783033603165251855960
 GPoint = (Gx,Gy) # This is our generator point. Trillions of dif ones possible
 a = -1
+user_details=["username","password"]
 # -x2 + y2 = 1 – (121665/121666) x2y2 (mod 2255 – 19)
 
 def modinv(a,n=Pcurve): #Extended Euclidean Algorithm/'division' in elliptic curves
@@ -199,9 +216,9 @@ def digital_verification(signature,message,n,Gpoint,Acurve,Pcurve,pub_key):
 
     return is_valid
 
-@app.route('/')
+@app.route('/',methods=['GET','POST'])
 def home():
-    return render_template('entry.html')
+    return render_template('index.html')
 # @app.route('/')
 # def hello_world():
 #     email = dict(session)['profile']['email']
@@ -213,43 +230,87 @@ def home():
 #     redirect_uri = url_for('authorize', _external=True)
 #     return google.authorize_redirect(redirect_uri)
 
-
-
 @app.route('/register', methods=['POST','GET'])
 def register():
     error=None
     if request.method=='POST':
-        user_name=request.form["reg_name"]
+        email=request.form['reg_name']
+        print(email)
+        msg=Message(subject='OTP',sender='shivangiraj779@gmail.com',recipients=[email])
+        msg.body=str(otp)
+        mail.send(msg)
+
+        user_name=email
         password=request.form["reg_pass"]
         confirm_password=request.form["reg_cnfpass"]
+
         l=[user_name,password,confirm_password]
+
         print("in get")
         if Keys.query.filter(Keys.name == user_name).first():
             error="Username is already registered"
-            return render_template('register.html',error=error)
+            return render_template('signup.html',error=error)
         if password!=confirm_password:
             error="password doesn't match"
-            return render_template('register.html',error=error)
-        start = timeit.default_timer()
-        priv_key = generatePrivateKey()
-        # priv_key= 52DtQiYVZswRhx8dufcBaPhYxAYk1t9NiDUS2PndZGqn
-        #VP3Xfs2keB1CtJAeL3tsw3YACHaYxaChgUsEC16TszF
-        public_key= generatePublicKey(priv_key)
-        pub_key1=str(public_key[0])
-        pub_key2=str(public_key[1])
-        with open("files/private.txt",'w') as f:
-            f.write(str(priv_key))
-        new_key=Keys(name=l[0],password=l[1],public_key1=pub_key1,public_key2=pub_key2)
-        db.session.add(new_key)
-        db.session.commit()
-        target = os.path.join(app_root, 'files')
-        stop = timeit.default_timer()
-        print('Time: ', stop - start)
+            return render_template('signup.html',error=error)
+        # start = timeit.default_timer()
+        user_details[0]=user_name
+        user_details[1]=password
+#----------------
+
+        # priv_key = generatePrivateKey()
+        # # priv_key= 52DtQiYVZswRhx8dufcBaPhYxAYk1t9NiDUS2PndZGqn
+        # #VP3Xfs2keB1CtJAeL3tsw3YACHaYxaChgUsEC16TszF
+        # public_key= generatePublicKey(priv_key)
+        # pub_key1=str(public_key[0])
+        # pub_key2=str(public_key[1])
+        # with open("files/private.txt",'w') as f:
+        #     f.write(str(priv_key))
+        # new_key=Keys(name=l[0],password=l[1],public_key1=pub_key1,public_key2=pub_key2)
+        # db.session.add(new_key)
+        # db.session.commit()
+        # target = os.path.join(app_root, 'files')
+        # stop = timeit.default_timer()
+        # print('Time: ', stop - start)
         # files=send_from_directory(directory=target,filename="private.txt",as_attachment=True)
+        # #return send_from_directory(directory=target,filename="private.txt",as_attachment=True)
+    #-------------------------
+        return render_template('verify.html')
+    return render_template("signup.html")
+
+
+@app.route('/validate',methods=['POST'])
+def validate():
+    user_otp=request.form['otp']
+    priv_key = generatePrivateKey()
+    # priv_key= 52DtQiYVZswRhx8dufcBaPhYxAYk1t9NiDUS2PndZGqn
+    #VP3Xfs2keB1CtJAeL3tsw3YACHaYxaChgUsEC16TszF
+    public_key= generatePublicKey(priv_key)
+    pub_key1=str(public_key[0])
+    pub_key2=str(public_key[1])
+    with open("files/private.txt",'w') as f:
+        f.write(str(priv_key))
+    new_key=Keys(name=user_details[0],password=user_details[1],public_key1=pub_key1,public_key2=pub_key2)
+    db.session.add(new_key)
+    db.session.commit()
+    target = os.path.join(app_root, 'files')
+    # stop = timeit.default_timer()
+    # print('Time: ', stop - start)
+    files=send_from_directory(directory=target,filename="private.txt",as_attachment=True)
+    #return send_from_directory(directory=target,filename="private.txt",as_attachment=True)
+    if otp==int(user_otp):
         return send_from_directory(directory=target,filename="private.txt",as_attachment=True)
-        # print(l)
-        # return redirect(url_for("generation",l=l))
-    return render_template('register.html')
+        # return "<h3>Email varification succesfull Back to <a href='http://127.0.0.1:3001/login'>Login</a></h3> "
+    return "<h3>Please Try Again</h3>"
+
+# @app.route('/confirm_email/<token>', methods=['GET','POST'])
+# def confirm(token):
+#     print("in confirm mail part")
+#     try:
+#         email=s.loads(token,salt='email-confirmation',max_age=300)
+#     except SignatureExpired:
+#         return "The Token Expired"
+#     return render_template('login.html')
 
     
 @app.route('/login',methods=['POST','GET'])
@@ -303,7 +364,7 @@ def logout():
 def generation(l):
     if request.method=="POST":
         print("in post")
-        if request.form['submit_btn']=='genr_submit':
+        if request.form['uploadbutton']=='genr_submit':
             target = os.path.join(app_root, 'files')
             if not os.path.isdir(target):
                 os.makedirs(target)
@@ -338,7 +399,7 @@ def generation(l):
             print(target)
             print(type(send_from_directory(directory=target,filename="sign.txt")))
             return send_from_directory(directory=target,filename="sign.txt",as_attachment=True)
-        elif request.form['submit_btn']=='log_out':
+        elif request.form['uploadbutton']=='log_out':
             print("sign out clicked")
             return redirect(url_for("logout"))
         else:
@@ -349,7 +410,7 @@ def generation(l):
         l=l.replace("']","")
         ind=l.index('@')
         st=l[:ind]
-        return render_template('generation.html',l=st)
+        return render_template('Generation.html',l=st)
 
 
 # @app.route('/generation/<file>')
@@ -360,11 +421,12 @@ def generation(l):
 def verification():
     ans=None
     a=0
+    print(a)
     target = os.path.join(app_root, 'files')
     if not os.path.isdir(target):
         os.makedirs(target)
     if request.method == 'POST':
-        print("in post")
+        print("in post verification")
         name=request.form['vname']
         signature=request.files['sign']
         file = request.files['message']
@@ -382,10 +444,6 @@ def verification():
             message = f.read()
         print(message,name,sign)
         # print("signature",sign,sign_name)
-        if(len(sign)!=314):
-            # ans="Dangrous Host(Invalid Digital Signature)"
-            a=3
-            return render_template('verification.html',a=a)
         sign=sign.replace(' ','')
         sign=sign.replace("\n",'')
         sign=sign.replace('(',"")
@@ -397,7 +455,13 @@ def verification():
         if(len(key)==0):
             # error="Invalid username or this username is not yet registered"
             # return render_template('login.html',error=error)
+            print("a===4")
             a=4
+            return render_template('verification.html',a=a)
+        if(len(sign)<310 and len(sign)>320):
+            # ans="Dangrous Host(Invalid Digital Signature)"
+            print("a=======3")
+            a=3
             return render_template('verification.html',a=a)
         public_key1=""
         public_key2=""
@@ -410,7 +474,7 @@ def verification():
         R=(r1,r2)
         s=int(sign[1])
         si=(R,s)
-        print("si is perfect",R,s)
+        # print("si is perfect",R,s)
         valid = digital_verification(si,message,N,GPoint,a,Pcurve,public_key)
         print("valid",valid)
         # ans=str(valid)
@@ -419,10 +483,10 @@ def verification():
             a=1
         else:
             a=2
-        print(ans)
+        print(a)
         # return str(valid)
         # return redirect(url_for("verification",ans=ans))
-    print("in get")
+    print("in get verification")
     return render_template('verification.html',a=a)
 
 
