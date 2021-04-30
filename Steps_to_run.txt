@@ -22,3 +22,10 @@ git branch -m master main
 git fetch origin
 git branch -u origin/main main
 git remote set-head origin -a
+
+
+#### Problems #######
+Sign In - If we sign in directly, then for the first time we need to store in database and give them the priv_key. For the second time directly login through to generation page.
+hash func 11
+plagarism report
+

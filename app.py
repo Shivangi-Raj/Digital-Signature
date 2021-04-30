@@ -6,12 +6,17 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 #8888
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
-from datetime import datetime
+import pymongo 
+import dns
+import certifi
+
+from datetime import datetime,date
 import random
 from hashlib import sha256
 from egcd import egcd
 import os,sys
 import timeit
+import time
 # from bigchaindb_driver import BigchainDB
 # from bigchaindb_driver.crypto import generate_keypair
 from authlib.integrations.flask_client import OAuth
@@ -45,12 +50,23 @@ ALLOWED_HOST = ["*"]
 
 app.config["MAIL_SERVER"]='smtp.gmail.com'  
 app.config["MAIL_PORT"] = 465      
-app.config["MAIL_USERNAME"] = 'shivangiraj779@gmail.com'  
-app.config['MAIL_PASSWORD'] = 'Shivu1999@123'  
+app.config["MAIL_USERNAME"] = 'sigdigital21@gmail.com'  
+app.config['MAIL_PASSWORD'] = 'DigitalSignature21'  
 app.config['MAIL_USE_TLS'] = False  
 app.config['MAIL_USE_SSL'] = True  
 
 mail = Mail(app) 
+# client=MongoClient("mongodb+srv://shivangi_raj:shivangi_raj@cluster0.3vdqz.mongodb.net/Digital_Signature?retryWrites=true&w=majority")
+# db1=client.get_database('Digital_Signature')
+# records=db1.keys
+
+client =pymongo.MongoClient("mongodb+srv://shivangi_raj:shivangi_raj@cluster0.3vdqz.mongodb.net", tlsCAFile=certifi.where())
+db = client['DigitalSignature']
+records=db['keys']
+print(client.list_database_names())
+
+
+
 otp=randint(000000,999999)
 
 s = URLSafeTimedSerializer('Thisisasecret!!')
@@ -63,8 +79,8 @@ s = URLSafeTimedSerializer('Thisisasecret!!')
 
 
 
-db = SQLAlchemy(app)
-res = app.test_client()
+# db = SQLAlchemy(app)
+# res = app.test_client()
 app_root = os.path.dirname(os.path.abspath(__file__))
 
 ########### For kobalts curve, the specifications ################
@@ -97,12 +113,12 @@ ddash = 121665 * modinv(121666, Pcurve) #ed25519 as the value would have been -v
 d=Pcurve-(ddash%Pcurve)
 
 
-class Keys(db.Model):
-    id = db.Column(db.Integer, primary_key=True,autoincrement=True)
-    name = db.Column(db.String(200),unique=True, nullable=False)
-    password=db.Column(db.String(200),nullable=False)
-    public_key1 = db.Column(db.String(500))
-    public_key2 = db.Column(db.String(500))
+# class Keys(db.Model):
+#     id = db.Column(db.Integer, primary_key=True,autoincrement=True)
+#     name = db.Column(db.String(200),unique=True, nullable=False)
+#     password=db.Column(db.String(200),nullable=False)
+#     public_key1 = db.Column(db.String(500))
+#     public_key2 = db.Column(db.String(500))
 
 
 
@@ -184,12 +200,14 @@ def hashMessage(message):
 
 
 def digital_signature(message,n,GPoint,Acurve,Pcurve,priv_key,username):
-    key = Keys.query.filter_by(name=username).all()
+    # key = Keys.query.filter_by(name=username).all()
+    key = records.find_one({"name":username})
+
     public_key1=""
     public_key2=""
     print("key :",key,username)
-    public_key1 = key[0].public_key1
-    public_key2 = key[0].public_key2
+    public_key1 = key['public_key1']
+    public_key2 = key['public_key2']
     publicKey=(int(public_key1),int(public_key2))
     r = hashMessage(hashMessage(message) + message) % Pcurve
     R = EccMultiply(GPoint, r)
@@ -200,7 +218,8 @@ def digital_signature(message,n,GPoint,Acurve,Pcurve,priv_key,username):
 
 
 def digital_verification(signature,message,n,Gpoint,Acurve,Pcurve,pub_key):
-    int_message = textToInt(message)
+    int_message = hashMessage(message)
+    print("The hash message ",int_message)
     print("signature:   ",signature[0][0])
     h = hashMessage(signature[0][0] + pub_key[0] + int_message) % Pcurve
     print("line 174 success")
@@ -218,17 +237,14 @@ def digital_verification(signature,message,n,Gpoint,Acurve,Pcurve,pub_key):
 
 @app.route('/',methods=['GET','POST'])
 def home():
+    # sample_doc={"name":"Honey@gmail.com","password":"hello","publicKey1":"12345","publicKey2":"6789"}
+    # records.insert_one(sample_doc)
     return render_template('index.html')
-# @app.route('/')
-# def hello_world():
-#     email = dict(session)['profile']['email']
-#     return f'Hello, you are logge in as {email}!'
 
-# @app.route('/login1')
-# def login1():
-#     google=oauth.create_client('google')
-#     redirect_uri = url_for('authorize', _external=True)
-#     return google.authorize_redirect(redirect_uri)
+@app.route('/about',methods=['GET','POST'])
+def about():
+    return render_template("")
+
 
 @app.route('/register', methods=['POST','GET'])
 def register():
@@ -243,11 +259,10 @@ def register():
         user_name=email
         password=request.form["reg_pass"]
         confirm_password=request.form["reg_cnfpass"]
-
         l=[user_name,password,confirm_password]
-
         print("in get")
-        if Keys.query.filter(Keys.name == user_name).first():
+        # if Keys.query.filter(Keys.name == user_name).first():
+        if records.find_one({"name":user_name})!=None:
             error="Username is already registered"
             return render_template('signup.html',error=error)
         if password!=confirm_password:
@@ -256,25 +271,6 @@ def register():
         # start = timeit.default_timer()
         user_details[0]=user_name
         user_details[1]=password
-#----------------
-
-        # priv_key = generatePrivateKey()
-        # # priv_key= 52DtQiYVZswRhx8dufcBaPhYxAYk1t9NiDUS2PndZGqn
-        # #VP3Xfs2keB1CtJAeL3tsw3YACHaYxaChgUsEC16TszF
-        # public_key= generatePublicKey(priv_key)
-        # pub_key1=str(public_key[0])
-        # pub_key2=str(public_key[1])
-        # with open("files/private.txt",'w') as f:
-        #     f.write(str(priv_key))
-        # new_key=Keys(name=l[0],password=l[1],public_key1=pub_key1,public_key2=pub_key2)
-        # db.session.add(new_key)
-        # db.session.commit()
-        # target = os.path.join(app_root, 'files')
-        # stop = timeit.default_timer()
-        # print('Time: ', stop - start)
-        # files=send_from_directory(directory=target,filename="private.txt",as_attachment=True)
-        # #return send_from_directory(directory=target,filename="private.txt",as_attachment=True)
-    #-------------------------
         return render_template('verify.html')
     return render_template("signup.html")
 
@@ -290,9 +286,13 @@ def validate():
     pub_key2=str(public_key[1])
     with open("files/private.txt",'w') as f:
         f.write(str(priv_key))
-    new_key=Keys(name=user_details[0],password=user_details[1],public_key1=pub_key1,public_key2=pub_key2)
-    db.session.add(new_key)
-    db.session.commit()
+    new_key={"name":user_details[0],"password":user_details[1],"public_key1":pub_key1,"public_key2":pub_key2}
+    records.insert_one(new_key)
+    
+    # new_key=Keys(name=user_details[0],password=user_details[1],public_key1=pub_key1,public_key2=pub_key2)
+    # db.session.add(new_key)
+    # db.session.commit()
+
     target = os.path.join(app_root, 'files')
     # stop = timeit.default_timer()
     # print('Time: ', stop - start)
@@ -319,14 +319,14 @@ def login():
     if request.method=="POST":
         user_name=request.form["log_name"]
         # password=request.form["log_pass"]
-        key = Keys.query.filter_by(name=user_name).all()
+        key = records.find_one({"name":user_name})
         # print("keys :",key)
-        if(len(key)==0):
+        if(key==None):
             error="Invalid username or this username is not yet registered"
             return render_template('login.html',error=error)
             print(error)   
-        password= key[0].password
-        print("key",key,type(password),password)        
+        password= key['password']
+        # print("key",key,type(password),password)        
         if request.form['log_pass'] != password:
             error = 'Invalid Password. Please try again.'
             return render_template('login.html',error=error)
@@ -372,30 +372,39 @@ def generation(l):
             st=l.replace("['","")
             st=st.replace("']","")
             username=st
-            print("The Username :",type(l),l)
+            # print("The Username :",type(l),l)
             private_key=request.files['priv_key']
             file = request.files['message']
             priv_key_name=private_key.filename or ''
             file_name = file.filename or ''
             destination = '/'.join([target, file_name])
             destination_priv='/'.join([target, priv_key_name])
-            print("destination",destination)
+            # print("destination",destination)
             file.save(destination)
             private_key.save(destination_priv)
-            print(file,file_name)
             with open(destination, 'r') as f:
                 message = f.read()
             with open(destination_priv, 'r') as f:
                 private_key = f.read()
             priv_key=int(private_key)
             print(message,priv_key)
-            message_in_int=textToInt(message)
+            # timestamp=str(time.time())
+            today = date.today()
+            # # dd/mm/YY
+            d1 = today.strftime("%d/%m/%Y")
+            d1=d1.replace("/","") #ddmmyyyy
+            timestamp=str(int(time.time())) #10char
+            message=message+d1+timestamp
+            message_in_int=hashMessage(message)
+            print("hashvalue",message_in_int,message)
             # generation
             signature = digital_signature(message_in_int,N,GPoint,a,Pcurve,priv_key,username)
+            # signature=timestamp
             #
+            sign=str(signature)+d1+timestamp
             target = os.path.join(app_root, 'files')
             with open("files/sign.txt",'w') as f:
-                f.write(str(signature))
+                f.write(sign)
             print(target)
             print(type(send_from_directory(directory=target,filename="sign.txt")))
             return send_from_directory(directory=target,filename="sign.txt",as_attachment=True)
@@ -442,7 +451,12 @@ def verification():
             sign= s.read()
         with open(destination, 'r') as f:
             message = f.read()
-        print(message,name,sign)
+        # print(message,name,sign)
+        # Adding time stamp to my message file
+        timestamp=sign[-18:]
+        sign=sign[:-18]
+        print("time stamp in verification",timestamp,sign)
+        message=message+timestamp
         # print("signature",sign,sign_name)
         sign=sign.replace(' ','')
         sign=sign.replace("\n",'')
@@ -450,9 +464,9 @@ def verification():
         sign=sign.replace(')',"")
         sig_split=sign.split(",")
         sign=((sig_split[0],sig_split[1]),sig_split[2])
-        print("signature 1 : ",sign)
-        key = Keys.query.filter_by(name=name).all()
-        if(len(key)==0):
+        # print("signature 1 : ",sign)
+        key = records.find_one({"name":name})
+        if(key==None):
             # error="Invalid username or this username is not yet registered"
             # return render_template('login.html',error=error)
             print("a===4")
@@ -466,8 +480,8 @@ def verification():
         public_key1=""
         public_key2=""
         output=[]
-        public_key1 = key[0].public_key1
-        public_key2 = key[0].public_key2
+        public_key1 = key['public_key1']
+        public_key2 = key['public_key2']
         public_key=(int(public_key1),int(public_key2))
         r1=int(sign[0][0])
         r2=int(sign[0][1])
@@ -489,57 +503,6 @@ def verification():
     print("in get verification")
     return render_template('verification.html',a=a)
 
-
-
-# #verification
-# @app.route('/abc',methods =['POST'])
-# def Signature_verification():
-#     target = os.path.join(app_root, 'files')
-#     if not os.path.isdir(target):
-#         os.makedirs(target)
-#     if request.method == 'POST':
-#         name=request.form['name']
-#         signature=request.files['sign']
-#         file = request.files['message']
-#         sign_name=signature.filename or ''
-#         file_name = file.filename or ''
-#         destination_sign='/'.join([target,sign_name])
-#         destination = '/'.join([target, file_name])
-#         print("destination",destination)
-#         file.save(destination)
-#         signature.save(destination_sign)
-#         print(file,file_name)
-#         with open(destination_sign,'r') as s:
-#             sign= s.read()
-#         with open(destination, 'r') as f:
-#             message = f.read()
-#     print(message,name,sign)
-#     # print("signature",sign,sign_name)
-#     sign=sign.replace(' ','')
-#     sign=sign.replace("\n",'')
-#     sign=sign.replace('(',"")
-#     sign=sign.replace(')',"")
-#     sig_split=sign.split(",")
-#     sign=((sig_split[0],sig_split[1]),sig_split[2])
-#     print("signature 1 : ",sign)
-#     key = Keys.query.filter_by(name=name).all()
-#     public_key1=""
-#     public_key2=""
-#     output=[]
-#     public_key1 = key[0].public_key1
-#     public_key2 = key[0].public_key2
-#     public_key=(int(public_key1),int(public_key2))
-#     r1=int(sign[0][0])
-#     r2=int(sign[0][1])
-#     R=(r1,r2)
-#     s=int(sign[1])
-#     si=(R,s)
-#     print("si is perfect",R,s)
-#     valid = digital_verification(si,message,N,GPoint,a,Pcurve,public_key)
-#     print("valid",valid)
-#     return str(valid)
-#     # # print(data)
-#     # return "True"
 
 if __name__=="__main__":
     app.run(debug=True,port=3001)

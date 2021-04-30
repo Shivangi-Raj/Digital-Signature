@@ -53,8 +53,7 @@
 
   .submit_btn, .submit_btn_1{ 
         margin: 0;
-        position: absolute;
-        
+        position: absolute;    
         width: 30%;
         -ms-transform: translate(-50%, -50%);
         transform: translate(-50%, -50%);
@@ -70,7 +69,10 @@
 
     .submit_btn{
         left: 20%;
-    }  */
+    } 
+    .submit_btn_1{
+        left: 55%;;
+    }
 
     .submit_btn:hover{
         background-color:#bd901d ;
