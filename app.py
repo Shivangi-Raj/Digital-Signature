@@ -19,13 +19,13 @@ import timeit
 import time
 # from bigchaindb_driver import BigchainDB
 # from bigchaindb_driver.crypto import generate_keypair
-from authlib.integrations.flask_client import OAuth
+# from authlib.integrations.flask_client import OAuth
 from datetime import timedelta
 from random import *
 
 app = Flask(__name__)
-oauth = OAuth(app)
-google=oauth.register(
+# oauth = OAuth(app)
+'''google=oauth.register(
     oauth.register(
     name='google',
     client_id='762670119940-nncgfi9f3sjaqu49tss26ife6e3thbl0.apps.googleusercontent.com',
@@ -38,7 +38,7 @@ google=oauth.register(
     userinfo_endpoint='https://openidconnect.googleapis.com/v1/userinfo',  # This is only needed if using openId to fetch user info
     client_kwargs={'scope': 'openid email profile'},
 )
-)
+)'''
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # app.config['SECRET_KEY']='HELLOWORLD'
 app.secret_key ='bF1ZPJ6fA_NeRXJC_-7YrZ-Y'
@@ -111,15 +111,6 @@ def modinv(a,n=Pcurve): #Extended Euclidean Algorithm/'division' in elliptic cur
     
 ddash = 121665 * modinv(121666, Pcurve) #ed25519 as the value would have been -ve because d is -ve so finding positive modulous for it
 d=Pcurve-(ddash%Pcurve)
-
-
-# class Keys(db.Model):
-#     id = db.Column(db.Integer, primary_key=True,autoincrement=True)
-#     name = db.Column(db.String(200),unique=True, nullable=False)
-#     password=db.Column(db.String(200),nullable=False)
-#     public_key1 = db.Column(db.String(500))
-#     public_key2 = db.Column(db.String(500))
-
 
 
 def textToInt(text):
@@ -261,14 +252,12 @@ def register():
         confirm_password=request.form["reg_cnfpass"]
         l=[user_name,password,confirm_password]
         print("in get")
-        # if Keys.query.filter(Keys.name == user_name).first():
         if records.find_one({"name":user_name})!=None:
             error="Username is already registered"
             return render_template('signup.html',error=error)
         if password!=confirm_password:
             error="password doesn't match"
             return render_template('signup.html',error=error)
-        # start = timeit.default_timer()
         user_details[0]=user_name
         user_details[1]=password
         return render_template('verify.html')
@@ -279,8 +268,6 @@ def register():
 def validate():
     user_otp=request.form['otp']
     priv_key = generatePrivateKey()
-    # priv_key= 52DtQiYVZswRhx8dufcBaPhYxAYk1t9NiDUS2PndZGqn
-    #VP3Xfs2keB1CtJAeL3tsw3YACHaYxaChgUsEC16TszF
     public_key= generatePublicKey(priv_key)
     pub_key1=str(public_key[0])
     pub_key2=str(public_key[1])
@@ -288,29 +275,11 @@ def validate():
         f.write(str(priv_key))
     new_key={"name":user_details[0],"password":user_details[1],"public_key1":pub_key1,"public_key2":pub_key2}
     records.insert_one(new_key)
-    
-    # new_key=Keys(name=user_details[0],password=user_details[1],public_key1=pub_key1,public_key2=pub_key2)
-    # db.session.add(new_key)
-    # db.session.commit()
-
     target = os.path.join(app_root, 'files')
-    # stop = timeit.default_timer()
-    # print('Time: ', stop - start)
     files=send_from_directory(directory=target,filename="private.txt",as_attachment=True)
-    #return send_from_directory(directory=target,filename="private.txt",as_attachment=True)
     if otp==int(user_otp):
         return send_from_directory(directory=target,filename="private.txt",as_attachment=True)
-        # return "<h3>Email varification succesfull Back to <a href='http://127.0.0.1:3001/login'>Login</a></h3> "
     return "<h3>Please Try Again</h3>"
-
-# @app.route('/confirm_email/<token>', methods=['GET','POST'])
-# def confirm(token):
-#     print("in confirm mail part")
-#     try:
-#         email=s.loads(token,salt='email-confirmation',max_age=300)
-#     except SignatureExpired:
-#         return "The Token Expired"
-#     return render_template('login.html')
 
     
 @app.route('/login',methods=['POST','GET'])
@@ -333,7 +302,10 @@ def login():
             print(error)
         else:
             l=[user_name]
-            return redirect(url_for('generation',l=l))
+            uri=url_for('generation',l=l) # http://ip addrss/generation/
+            # uri="http://127.0.0.1:3001/generation/"+str(l)
+            print("uri",uri)
+            return redirect(uri)
     else:
         print("in get")
         # if request.form['submit_btn']=='google_signIn':
@@ -422,10 +394,6 @@ def generation(l):
         return render_template('Generation.html',l=st)
 
 
-# @app.route('/generation/<file>')
-# def generation(file):
-#     return render_template('generation.html',file=file)
-
 @app.route('/verification/', methods=['POST','GET'])
 def verification():
     ans=None
@@ -452,12 +420,14 @@ def verification():
         with open(destination, 'r') as f:
             message = f.read()
         # print(message,name,sign)
+
         # Adding time stamp to my message file
         timestamp=sign[-18:]
         sign=sign[:-18]
         print("time stamp in verification",timestamp,sign)
         message=message+timestamp
         # print("signature",sign,sign_name)
+
         sign=sign.replace(' ','')
         sign=sign.replace("\n",'')
         sign=sign.replace('(',"")
@@ -498,8 +468,6 @@ def verification():
         else:
             a=2
         print(a)
-        # return str(valid)
-        # return redirect(url_for("verification",ans=ans))
     print("in get verification")
     return render_template('verification.html',a=a)
 
