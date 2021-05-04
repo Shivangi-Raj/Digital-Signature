@@ -19,12 +19,12 @@ import timeit
 import time
 # from bigchaindb_driver import BigchainDB
 # from bigchaindb_driver.crypto import generate_keypair
-# from authlib.integrations.flask_client import OAuth
+from authlib.integrations.flask_client import OAuth
 from datetime import timedelta
 from random import *
 
 app = Flask(__name__)
-# oauth = OAuth(app)
+oauth = OAuth(app)
 '''google=oauth.register(
     oauth.register(
     name='google',
@@ -50,8 +50,8 @@ ALLOWED_HOST = ["*"]
 
 app.config["MAIL_SERVER"]='smtp.gmail.com'  
 app.config["MAIL_PORT"] = 465      
-app.config["MAIL_USERNAME"] = 'sigdigital21@gmail.com'  
-app.config['MAIL_PASSWORD'] = 'DigitalSignature21'  
+app.config["MAIL_USERNAME"] = 'shivangiraj779@gmail.com'  
+app.config['MAIL_PASSWORD'] = 'Shivu1999@123'  
 app.config['MAIL_USE_TLS'] = False  
 app.config['MAIL_USE_SSL'] = True  
 
@@ -234,7 +234,7 @@ def home():
 
 @app.route('/about',methods=['GET','POST'])
 def about():
-    return render_template("")
+    return render_template('a.html')
 
 
 @app.route('/register', methods=['POST','GET'])
@@ -346,7 +346,7 @@ def generation(l):
             username=st
             # print("The Username :",type(l),l)
             private_key=request.files['priv_key']
-            file = request.files['message']
+            file = request.files['message']             
             priv_key_name=private_key.filename or ''
             file_name = file.filename or ''
             destination = '/'.join([target, file_name])
